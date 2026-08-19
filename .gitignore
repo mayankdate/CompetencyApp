@@ -1,0 +1,21 @@
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Exported assessment data — never commit collected data to the app repo.
+# Keep field data in your separate analysis project instead.
+*.csv
+exports/
+data/
+
+# Logs and temp
+*.log
+tmp/
+node_modules/
