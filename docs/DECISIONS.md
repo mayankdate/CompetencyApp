@@ -16,6 +16,40 @@
 
 ---
 
+## 2026-08-19 — v0.04: full field set, hamburger menu, version scheme
+
+**Decision:** (a) Expand the form to a UWIN-like immunization record —
+beneficiary name, age, sex, mobile, village, date of visit, vaccine, dose,
+adverse reaction — spanning varied input types (text/number/tel/radio/date/
+select/checkbox), since different widgets expose different competency
+barriers. (b) Hide interviewer controls behind a **hamburger menu** on the
+form screen so it looks like a real health app; opening the menu **auto-pauses
+telemetry**. (c) Capture **per-field** timing + focus counts. (d) Adopt a
+`v0.NN` version scheme for proof-of-concept builds; current build is **v0.04**.
+**Why:** The form must feel authentic to the health worker (no visible
+research controls), the interviewer still needs pause/stop/save without
+leaving the screen, and varied field types plus per-field telemetry are what
+actually answer the research questions.
+**Rejected:** A visible interviewer bar on the form (breaks authenticity). A
+free "peek at meta" that navigates away mid-form (risks losing the in-progress
+entry — leaving is always an explicit resume/save/discard choice instead).
+
+## 2026-08-19 — Version display on meta screen
+
+**Decision:** Show the running version on the meta screen (`APP_VERSION` in
+`app.js`), plus whether the service worker is active. The version string is
+kept in two files — `APP_VERSION` (app.js, for display) and `APP_VERSION_TAG`
+(service-worker.js, for the cache name) — synced **by hand** and kept
+identical. Format includes a date, e.g. `"v2 — 2026-08-19"`.
+**Why:** With many devices in the field, we need to confirm all interviewers
+run the same build, especially after pushing an update mid-fieldwork. Tying
+the displayed version to the cache-naming version means "what you see" equals
+"what's actually running".
+**Rejected:** A hardcoded version number separate from the cache name (would
+drift out of sync). A single shared constant across both files (would require
+a build step, which is a settled no). Auto-generating from git (no build
+step / not available client-side).
+
 ## 2026-08-19 — Two-layer design (meta + form) and data safeguards
 
 **Decision:** Split the app into a **meta screen** (interviewer: enter/confirm

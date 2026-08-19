@@ -2,22 +2,15 @@
 <!--
   index.html — the single page of the app.
 
-  This is the app's entry point. GitHub Pages serves this file as the
-  homepage. It must stay at the project root.
+  Entry point; GitHub Pages serves this as the homepage. Must stay at root.
 
-  TWO-LAYER DESIGN:
-  The app has two screens, both living in this one file as <section>s.
-  JavaScript shows one at a time (a simple "single-page app" pattern —
-  no framework, no routing library).
-
-    1. META SCREEN  (#metaScreen)  — the INTERVIEWER's screen.
-       Enter the respondent ID (from the main CAPI survey), start an
-       assessment, and afterwards export data or (guarded) clear it.
-
-    2. FORM SCREEN  (#formScreen)  — the HEALTH WORKER's screen.
-       The UWIN-like record they fill in while telemetry runs. The
-       interviewer hands the phone over here and takes it back via
-       "End assessment", which returns to the meta screen.
+  TWO-LAYER DESIGN (two <section>s, JS shows one at a time):
+    1. META SCREEN (#metaScreen) — the INTERVIEWER's screen. Enter/confirm
+       respondent ID, start, export, guarded clear, version display.
+    2. FORM SCREEN (#formScreen) — the HEALTH WORKER's screen. A UWIN-like
+       record. Looks like a real health app: a title bar with a hamburger
+       (☰) menu that hides the interviewer's session controls (resume/
+       pause/end/discard). Opening the menu auto-pauses telemetry.
 
   Load order at the bottom matters: localforage first, then js/app.js.
 -->
@@ -51,29 +44,87 @@
 
     <hr />
 
-    <!-- Data management — interviewer only. -->
     <p id="count">Saved assessments on this device: 0</p>
     <button id="exportBtn">Export all as CSV</button>
-
-    <!-- Clear is visually de-emphasised and guarded in JS. -->
     <button id="clearBtn" class="danger subtle">Clear all data…</button>
 
     <p id="metaStatus" class="status"></p>
+    <p id="versionInfo" class="version-info"></p>
   </section>
 
   <!-- =====================================================
        FORM SCREEN — health worker's record screen
+       Designed to look like a real health reporting app.
        ===================================================== -->
-  <section id="formScreen" class="screen hidden">
-    <h1>Mock Health Record</h1>
-    <p class="sub">Assessment for: <strong id="activeRespondent">—</strong></p>
+  <section id="formScreen" class="screen-full hidden">
 
-    <!-- The real UWIN-like fields will be built out here. One for now. -->
-    <label for="patientName">Patient name</label>
-    <input type="text" id="patientName" placeholder="Type the patient's name" />
+    <!-- App-like title bar with hamburger menu. -->
+    <header class="app-bar">
+      <button id="menuBtn" class="menu-btn" aria-label="Menu">&#9776;</button>
+      <span class="app-bar-title">Immunization Record</span>
+    </header>
 
-    <button id="endBtn">End assessment &amp; save</button>
-    <button id="cancelBtn" class="subtle">Cancel (discard this assessment)</button>
+    <!-- The record body — looks like a real form. -->
+    <div class="form-body">
+      <label for="patientName">Beneficiary name</label>
+      <input type="text" id="patientName" placeholder="Full name" />
+
+      <label for="age">Age (years)</label>
+      <input type="number" id="age" min="0" max="120" placeholder="e.g. 2" />
+
+      <label>Sex</label>
+      <div class="radio-row">
+        <label class="radio"><input type="radio" name="sex" value="Male" /> Male</label>
+        <label class="radio"><input type="radio" name="sex" value="Female" /> Female</label>
+        <label class="radio"><input type="radio" name="sex" value="Other" /> Other</label>
+      </div>
+
+      <label for="mobile">Mobile number</label>
+      <input type="tel" id="mobile" placeholder="10-digit number" />
+
+      <label for="village">Village / area</label>
+      <input type="text" id="village" placeholder="Village or area name" />
+
+      <label for="visitDate">Date of visit</label>
+      <input type="date" id="visitDate" />
+
+      <label for="vaccine">Vaccine given</label>
+      <select id="vaccine">
+        <option value="">Select vaccine…</option>
+        <option value="BCG">BCG</option>
+        <option value="OPV">OPV</option>
+        <option value="Pentavalent">Pentavalent</option>
+        <option value="Measles-Rubella">Measles-Rubella</option>
+        <option value="DPT Booster">DPT Booster</option>
+      </select>
+
+      <label for="dose">Dose number</label>
+      <select id="dose">
+        <option value="">Select dose…</option>
+        <option value="1">Dose 1</option>
+        <option value="2">Dose 2</option>
+        <option value="3">Dose 3</option>
+        <option value="Booster">Booster</option>
+      </select>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="adverse" /> Any adverse reaction reported?
+      </label>
+
+      <button id="submitBtn" class="submit">Submit record</button>
+    </div>
+
+    <!-- Hidden interviewer menu pane + backdrop (slides in from the left). -->
+    <div id="menuBackdrop" class="menu-backdrop hidden"></div>
+    <nav id="menuPane" class="menu-pane hidden">
+      <h2>Interviewer controls</h2>
+      <p class="menu-note">Assessment for: <strong id="activeRespondent">—</strong></p>
+      <p class="menu-note">Telemetry is paused while this menu is open.</p>
+
+      <button id="resumeBtn">Resume assessment</button>
+      <button id="endBtn">End &amp; save</button>
+      <button id="discardBtn" class="danger subtle">Discard (don't save)</button>
+    </nav>
 
     <p id="formStatus" class="status"></p>
   </section>

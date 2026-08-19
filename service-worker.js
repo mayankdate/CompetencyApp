@@ -10,15 +10,25 @@
     activate — delete caches from older versions.
     fetch    — serve files from the cache, falling back to the network.
 
-  IMPORTANT — updating the app:
-  Browsers keep serving the CACHED files until the cache name changes.
-  So EVERY time you change any file listed in FILES_TO_CACHE, bump the
-  version below (e.g. "-v1" -> "-v2"), commit, and push. Otherwise devices
-  will keep running the old cached version.
+  IMPORTANT — VERSION MUST MATCH app.js:
+  The version string below must be kept in step with APP_VERSION in
+  js/app.js. app.js shows APP_VERSION on the meta screen; this file uses
+  the same version to name the cache. The service worker loads before
+  app.js and can't share a variable with it without a build step (which
+  this project deliberately avoids), so the two are kept in sync BY HAND.
+
+  Therefore, whenever you change any cached file, update BOTH:
+    1. APP_VERSION in js/app.js
+    2. APP_VERSION_TAG below
+  Keep them identical. (See ARCHITECTURE.md "Versioning".)
 */
 
-// Bump this version string whenever any cached file changes.
-const CACHE_NAME = "competency-app-v2";
+// Keep this identical to APP_VERSION in js/app.js.
+const APP_VERSION_TAG = "v0.04";
+
+// The cache name is derived from the version tag, so bumping the version
+// automatically gives a fresh cache and evicts the old one on activate.
+const CACHE_NAME = "competency-app-" + APP_VERSION_TAG;
 
 // Every file the app needs to run offline. Paths are relative to this
 // file (the root). Add new CSS/JS files here as the app grows.

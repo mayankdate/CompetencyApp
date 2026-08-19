@@ -1,10 +1,11 @@
 /*
-  style.css — all visual styling for the app.
+  style.css — all visual styling.
 
-  Kept deliberately simple and system-font based so it renders fast and
-  looks native-ish on low-end Android devices. As the real UWIN-like UI
-  is built, new component styles should be added here with a short comment
-  block above each section explaining what it styles.
+  Two visual worlds on purpose:
+    - The META screen looks like a plain research/admin tool.
+    - The FORM screen is styled to resemble a real health reporting app
+      (app bar, hamburger, clean form), so the health worker experiences
+      something authentic. Interviewer controls hide in the menu pane.
 */
 
 * { box-sizing: border-box; }
@@ -16,8 +17,11 @@ body {
   color: #1a2027;
 }
 
-/* Central column, constrained for readability and phone-friendliness. */
-main {
+/* Utility. */
+.hidden { display: none; }
+
+/* ============ META SCREEN ============ */
+.screen {
   max-width: 480px;
   margin: 0 auto;
   padding: 24px 20px 60px;
@@ -26,7 +30,6 @@ main {
 h1 { font-size: 1.4rem; margin-bottom: 4px; }
 .sub { color: #667085; margin-top: 0; font-size: 0.9rem; }
 
-/* Form field labels. */
 label {
   display: block;
   font-weight: 600;
@@ -34,16 +37,16 @@ label {
   font-size: 0.95rem;
 }
 
-/* Text inputs. */
-input {
+input[type="text"], input[type="number"], input[type="tel"],
+input[type="date"], select {
   width: 100%;
   padding: 12px;
   font-size: 1rem;
   border: 1px solid #cdd5df;
   border-radius: 8px;
+  background: white;
 }
 
-/* Buttons: full-width, touch-friendly tap targets. */
 button {
   margin-top: 16px;
   padding: 12px 16px;
@@ -55,41 +58,108 @@ button {
   cursor: pointer;
   width: 100%;
 }
-
-/* Destructive actions (e.g. Clear all) are red as a warning. */
 button.danger { background: #dc2626; }
+button.subtle { background: #e4e7ec; color: #475467; }
+button.danger.subtle { background: #fee2e2; color: #b42318; }
 
 hr { margin: 28px 0; border: none; border-top: 1px solid #e4e7ec; }
-
 #count { font-weight: 600; }
 
-/* Transient status line; green = success. */
 .status {
   margin-top: 16px;
   min-height: 1.2em;
-  color: #059669;
   font-weight: 600;
+  color: #059669;
 }
 
-/* ============ TWO-LAYER SCREENS ============ */
-/* Each screen is a full section; only one is visible at a time. */
-.screen {
-  max-width: 480px;
+.version-info {
+  margin-top: 40px;
+  font-size: 0.8rem;
+  color: #98a2b3;
+  text-align: center;
+}
+
+/* ============ FORM SCREEN (health-app look) ============ */
+/* Full-width container (no centred card) so it feels like a real app. */
+.screen-full { min-height: 100vh; }
+
+/* App bar with hamburger + title. */
+.app-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #2563eb;
+  color: white;
+  padding: 14px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.menu-btn {
+  width: auto;
+  margin: 0;
+  padding: 0 6px;
+  background: transparent;
+  color: white;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.app-bar-title { font-size: 1.1rem; font-weight: 600; }
+
+/* Form body. */
+.form-body {
+  max-width: 520px;
   margin: 0 auto;
-  padding: 24px 20px 60px;
+  padding: 16px 20px 40px;
 }
 
-/* Hides whichever screen is not active. JS toggles this class. */
-.hidden { display: none; }
+/* Radio group laid out in a row of tappable chips. */
+.radio-row { display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap; }
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+  margin: 0;
+}
+.radio input { width: auto; }
 
-/* ============ SUBTLE / DE-EMPHASISED BUTTONS ============ */
-/* Used for lower-priority or dangerous-but-rare actions (Cancel, Clear),
-   so they don't invite accidental taps. */
-button.subtle {
-  background: #e4e7ec;
-  color: #475467;
+/* Checkbox row. */
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 400;
+  margin-top: 20px;
 }
-button.danger.subtle {
-  background: #fee2e2;   /* pale red: signals danger without shouting */
-  color: #b42318;
+.checkbox-row input { width: auto; }
+
+/* Submit looks like a primary app action. */
+button.submit { margin-top: 28px; background: #059669; }
+
+/* ============ INTERVIEWER MENU PANE ============ */
+/* Dim backdrop behind the pane; tap it to close (resume). */
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 20;
 }
+
+/* Slide-in pane from the left holding interviewer controls. */
+.menu-pane {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 78%;
+  max-width: 320px;
+  background: white;
+  z-index: 30;
+  padding: 24px 20px;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+}
+.menu-pane h2 { font-size: 1.1rem; margin: 0 0 8px; }
+.menu-note { font-size: 0.9rem; color: #667085; margin: 4px 0; }
+.menu-pane button { margin-top: 14px; }
