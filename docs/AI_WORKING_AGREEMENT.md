@@ -1,4 +1,21 @@
 # AI Working Agreement — Competency App
+
+> **Paste this file (or point to it) at the start of every AI-assisted session
+> on this project.** It restores context and sets the rules so the project
+> stays coherent across hundreds of conversations and possible maintainer
+> changes. Humans contributing should follow it too.
+
+---
+
+## 📋 Copy-paste this into a new conversation
+
+> The block below is the quick session-starter. Best practice is to also
+> attach the four `docs/` files as Project knowledge — pasted links only help
+> if the assistant actually fetches them, whereas attached knowledge is always
+> available. Before relying on the links, confirm the repo is public and the
+> branch is `main`, and open one link in a browser to check it resolves.
+
+```
 This is the CompetencyApp project — a mock health-record PWA for assessing
 digital competency of frontline health workers (ASHAs/ANMs) in India.
 
@@ -21,12 +38,7 @@ until its docs are updated in the same change (see the working agreement).
 
 I am new to programming but comfortable with R and VSCode — explain steps
 concretely and prefer no-build, no-terminal solutions.
-
-
-> **Paste this file (or point to it) at the start of every AI-assisted session
-> on this project.** It restores context and sets the rules so the project
-> stays coherent across hundreds of conversations and possible maintainer
-> changes. Humans contributing should follow it too.
+```
 
 ---
 

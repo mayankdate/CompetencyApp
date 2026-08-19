@@ -16,6 +16,24 @@
 
 ---
 
+## 2026-08-19 — Two-layer design (meta + form) and data safeguards
+
+**Decision:** Split the app into a **meta screen** (interviewer: enter/confirm
+respondent ID, start, export, guarded clear) and a **form screen** (health
+worker: the record + telemetry). Respondent ID is **typed by the interviewer**
+from the main CAPI survey, entered twice and confirmed equal; never
+auto-generated. Export filename is `competency_YYYY-MM-DD_<n>cases_HHMM.csv`
+and flags duplicate IDs in a column. **Clear** lives only on the meta screen
+and requires: confirm → passcode → forced pre-clear export → final confirm →
+wipe.
+**Why:** Separates who touches what (phone handover boundary), ties every
+record to the CAPI survey for reconciliation, and makes accidental data loss
+very hard (fat-finger protection was an explicit requirement).
+**Rejected:** Auto-generating the respondent ID (would break reconciliation
+with the CAPI survey). A single-tap clear (too easy to trigger accidentally).
+A real/secure passcode system (client-side code can't hold real secrets;
+that's a future cloud/auth concern, not needed to stop accidental taps).
+
 ## 2026-08-19 — Documentation & continuity system
 
 **Decision:** Adopt a four-document system in the repo — `PROJECT_BRIEF.md`

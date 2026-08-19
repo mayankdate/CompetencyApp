@@ -5,63 +5,80 @@
   This is the app's entry point. GitHub Pages serves this file as the
   homepage. It must stay at the project root.
 
-  The page is intentionally minimal in this skeleton: one input field,
-  a save button, and controls for exporting/clearing locally-stored
-  assessments. Real UWIN-like fields and the mock patient case will be
-  added here as the project grows.
+  TWO-LAYER DESIGN:
+  The app has two screens, both living in this one file as <section>s.
+  JavaScript shows one at a time (a simple "single-page app" pattern —
+  no framework, no routing library).
 
-  Load order matters at the bottom of <body>:
-    1. localforage  — the local-storage helper library (from a CDN)
-    2. js/app.js     — our own logic, which depends on localforage
+    1. META SCREEN  (#metaScreen)  — the INTERVIEWER's screen.
+       Enter the respondent ID (from the main CAPI survey), start an
+       assessment, and afterwards export data or (guarded) clear it.
+
+    2. FORM SCREEN  (#formScreen)  — the HEALTH WORKER's screen.
+       The UWIN-like record they fill in while telemetry runs. The
+       interviewer hands the phone over here and takes it back via
+       "End assessment", which returns to the meta screen.
+
+  Load order at the bottom matters: localforage first, then js/app.js.
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Makes the layout scale correctly on phones. -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Competency App — Mock Health Record</title>
-
-  <!-- PWA manifest: enables "Add to Home Screen" and offline install. -->
   <link rel="manifest" href="manifest.json" />
-  <!-- Browser UI colour on mobile (address bar tint). -->
   <meta name="theme-color" content="#2563eb" />
-
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <main>
-    <h1>Mock Health Record</h1>
-    <p class="sub">Skeleton build — proves the plumbing works.</p>
 
-    <!-- ============ ASSESSMENT FORM ============ -->
-    <!-- Each real UWIN-like field will follow this label+input pattern. -->
-    <label for="patientName">Patient name</label>
-    <input type="text" id="patientName" placeholder="Type the patient's name" />
+  <!-- =====================================================
+       META SCREEN — interviewer's control screen
+       ===================================================== -->
+  <section id="metaScreen" class="screen">
+    <h1>Competency Assessment</h1>
+    <p class="sub">Interviewer screen. Enter the respondent ID to begin.</p>
 
-    <button id="saveBtn">Save assessment</button>
+    <label for="respondentId">Respondent ID (from CAPI survey)</label>
+    <input type="text" id="respondentId" placeholder="e.g. SVY-04821"
+           autocomplete="off" autocapitalize="characters" />
+
+    <label for="respondentIdConfirm">Confirm respondent ID</label>
+    <input type="text" id="respondentIdConfirm" placeholder="Type the same ID again"
+           autocomplete="off" autocapitalize="characters" />
+
+    <button id="startBtn">Start assessment</button>
 
     <hr />
 
-    <!-- ============ DATA MANAGEMENT ============ -->
-    <!-- These controls are for the interviewer, not the health worker. -->
+    <!-- Data management — interviewer only. -->
     <p id="count">Saved assessments on this device: 0</p>
     <button id="exportBtn">Export all as CSV</button>
-    <button id="clearBtn" class="danger">Clear all (careful)</button>
 
-    <!-- Transient feedback messages ("Saved.", "Exported 3...") appear here. -->
-    <p id="status" class="status"></p>
-  </main>
+    <!-- Clear is visually de-emphasised and guarded in JS. -->
+    <button id="clearBtn" class="danger subtle">Clear all data…</button>
 
-  <!--
-    localforage: a small, well-known library that stores data in the
-    browser's IndexedDB. IndexedDB survives page reloads, browser
-    restarts, and phone reboots, and works with no internet connection.
-    Loaded from a CDN, but also cached by the service worker so it
-    remains available offline after the first visit.
-  -->
+    <p id="metaStatus" class="status"></p>
+  </section>
+
+  <!-- =====================================================
+       FORM SCREEN — health worker's record screen
+       ===================================================== -->
+  <section id="formScreen" class="screen hidden">
+    <h1>Mock Health Record</h1>
+    <p class="sub">Assessment for: <strong id="activeRespondent">—</strong></p>
+
+    <!-- The real UWIN-like fields will be built out here. One for now. -->
+    <label for="patientName">Patient name</label>
+    <input type="text" id="patientName" placeholder="Type the patient's name" />
+
+    <button id="endBtn">End assessment &amp; save</button>
+    <button id="cancelBtn" class="subtle">Cancel (discard this assessment)</button>
+
+    <p id="formStatus" class="status"></p>
+  </section>
+
   <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
-
-  <!-- Our application logic. Must load after localforage. -->
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -80,22 +80,60 @@ Project documentation (this file and its siblings).
 
 ---
 
-## 3. The data model
+## 3. Two-layer design (meta screen + form screen)
+
+The app has **two screens**, both in `index.html` as `<section>`s, with JS
+showing one at a time (a simple single-page pattern — no framework/router):
+
+- **Meta screen** (`#metaScreen`) — the **interviewer's** control screen.
+  Enter + confirm the respondent ID (from the main CAPI survey), start an
+  assessment, and afterwards export or (guarded) clear data.
+- **Form screen** (`#formScreen`) — the **health worker's** record screen.
+  The UWIN-like fields, filled while telemetry runs. "End assessment & save"
+  returns to the meta screen; "Cancel" discards without saving.
+
+The physical phone handover happens at this boundary: interviewer hands over
+at the form screen, takes back at the meta screen.
+
+Screen switching is done by `showMeta()` / `showForm()`, which toggle a
+`.hidden` CSS class.
+
+## 4. The data model
 
 One assessment = one **record object**, stored under a string key (its `id`).
 Current shape:
 
 ```js
 {
-  id: 1699999999999,                 // ms timestamp, unique-enough key
-  savedAt: "2026-08-19T16:07:00.000Z",
+  id: 1699999999999,                 // ms timestamp, unique local key
+  respondentId: "SVY-04821",         // typed by interviewer; links to CAPI survey
+  startedAt: "2026-08-19T16:05:00Z", // when the form screen opened
+  savedAt:   "2026-08-19T16:07:00Z", // when "End assessment" was tapped
   patientName: "Asha Devi",          // data the worker entered
   nameFieldTimeMs: 4213              // a captured metric
 }
 ```
 
+The **respondent ID** is entered twice on the meta screen and must match
+before an assessment can start — cheap insurance against mistyped IDs that
+would break reconciliation with the main survey.
+
 As fields and metrics are added, this object gains properties. The CSV export
-column list in `app.js` (section 6) must be updated to include them.
+column list in `app.js` (`exportCsv()`) must be updated to include them.
+
+## 4a. Respondent ID, export, and the guarded clear
+
+- **Respondent ID:** interviewer types it (from the CAPI survey), entered
+  twice and confirmed equal. Never auto-generated — it must match the main
+  survey exactly.
+- **Export filename:** `competency_YYYY-MM-DD_<n>cases_HHMM.csv`, so the date,
+  case count, and time are visible and repeat exports don't overwrite.
+- **Duplicate IDs:** the export adds a `duplicateId` column flagging any
+  respondent ID that appears in more than one record, to catch in analysis.
+- **Clear all (guarded):** lives only on the meta screen and runs a safety
+  sequence — confirm → passcode (`CLEAR_PASSCODE` in `app.js`, a speed bump,
+  not real security) → **forced pre-clear CSV export** → final confirm → wipe.
+  Data is always saved to a file before anything is deleted.
 
 ---
 

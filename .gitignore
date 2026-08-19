@@ -19,6 +19,3 @@ data/
 *.log
 tmp/
 node_modules/
-
-# Specific Files
-Claude_NewConvo.md

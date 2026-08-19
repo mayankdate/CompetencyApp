@@ -1,132 +1,216 @@
 /*
-  app.js — all application logic for the skeleton build.
+  app.js — all application logic.
 
-  Responsibilities right now:
+  Responsibilities:
     1. Configure local storage (localforage / IndexedDB).
-    2. Capture one example telemetry metric (time spent on the name field).
-    3. Save each assessment locally on the device.
-    4. Count, export (to CSV), and clear stored assessments.
-    5. Register the service worker that makes the app work offline.
+    2. Switch between the two screens (meta <-> form).
+    3. Validate and carry the respondent ID from the meta screen.
+    4. Capture telemetry (currently: time on the name field).
+    5. Save each assessment locally, tagged with its respondent ID.
+    6. Count, export (CSV, well-named), and clear (guarded) assessments.
+    7. Register the service worker that makes the app work offline.
 
-  As the project grows this file will be split into focused modules
-  (e.g. storage.js, telemetry.js) once it is large enough that splitting
-  genuinely aids navigation. Until then, everything lives here, grouped
-  into clearly-labelled sections.
+  Will be split into modules (storage.js, telemetry.js, screens.js) once
+  large enough that splitting clearly aids navigation. Not yet.
 
-  KEY CONCEPT — telemetry:
-  The whole point of this app is to measure how health workers interact
-  with a digital form. So alongside the *data they enter*, we record
-  *how they entered it* (timings, edits, errors). The name-field timer
-  below is the first, simplest example of that pattern.
+  KEY CONCEPT — telemetry: we record not just the data entered but HOW it
+  was entered (timings, edits, errors). The name-field timer is the first
+  example of that pattern; future metrics follow the same shape.
 */
+
+// ============================================================
+// 0. CONFIG — values you may want to change live here
+// ============================================================
+// Passcode that guards the destructive "Clear all data" action. This is
+// only a speed bump against accidental taps / casual fiddling — it lives
+// in the code, so it is NOT real security. Change it to whatever your
+// field team should use.
+const CLEAR_PASSCODE = "wipe1234";
 
 // ============================================================
 // 1. STORAGE SETUP
 // ============================================================
-// localforage wraps IndexedDB in a simple get/set API. This data
-// persists across reloads, browser restarts, and reboots, and needs
-// no internet. "name" and "storeName" just namespace our database.
 localforage.config({ name: "competency-app", storeName: "assessments" });
 
 // ============================================================
-// 2. GRAB REFERENCES TO PAGE ELEMENTS
+// 2. ELEMENT REFERENCES
 // ============================================================
-// We look these up once and reuse them, rather than searching the
-// page every time.
-const nameInput = document.getElementById("patientName");
-const saveBtn   = document.getElementById("saveBtn");
-const exportBtn = document.getElementById("exportBtn");
-const clearBtn  = document.getElementById("clearBtn");
-const countEl   = document.getElementById("count");
-const statusEl  = document.getElementById("status");
+// Meta screen
+const metaScreen      = document.getElementById("metaScreen");
+const respondentInput = document.getElementById("respondentId");
+const respondentConfirm = document.getElementById("respondentIdConfirm");
+const startBtn        = document.getElementById("startBtn");
+const countEl         = document.getElementById("count");
+const exportBtn       = document.getElementById("exportBtn");
+const clearBtn        = document.getElementById("clearBtn");
+const metaStatus      = document.getElementById("metaStatus");
+
+// Form screen
+const formScreen      = document.getElementById("formScreen");
+const activeRespondent = document.getElementById("activeRespondent");
+const nameInput       = document.getElementById("patientName");
+const endBtn          = document.getElementById("endBtn");
+const cancelBtn       = document.getElementById("cancelBtn");
+const formStatus      = document.getElementById("formStatus");
 
 // ============================================================
-// 3. TELEMETRY — example: time spent on the name field
+// 3. SESSION STATE — the assessment currently in progress
 // ============================================================
-// We record the moment the user first focuses (taps into) the field,
-// and compute elapsed time when they leave it (blur) or when they save.
-// This is the template every future per-field metric will follow.
-let fieldFocusTime = null; // timestamp (ms) when field was first focused
-let fieldTimeMs    = null; // total time spent, computed on blur/save
+// Holds everything about the in-progress assessment between "Start" and
+// "End". Reset to null when no assessment is active.
+let currentSession = null;
 
-nameInput.addEventListener("focus", () => {
-  // Only record the *first* focus, so re-focusing doesn't reset the clock.
-  if (fieldFocusTime === null) fieldFocusTime = Date.now();
-});
+// ============================================================
+// 4. SCREEN SWITCHING
+// ============================================================
+// Show one screen, hide the other. The .hidden class (in CSS) does the
+// actual hiding.
+function showMeta() {
+  formScreen.classList.add("hidden");
+  metaScreen.classList.remove("hidden");
+}
+function showForm() {
+  metaScreen.classList.add("hidden");
+  formScreen.classList.remove("hidden");
+}
 
-nameInput.addEventListener("blur", () => {
-  if (fieldFocusTime !== null) {
-    fieldTimeMs = Date.now() - fieldFocusTime;
+// ============================================================
+// 5. START AN ASSESSMENT (meta -> form)
+// ============================================================
+startBtn.addEventListener("click", () => {
+  const id = respondentInput.value.trim();
+  const idConfirm = respondentConfirm.value.trim();
+
+  // Validation: ID must be present and both entries must match. A
+  // mistyped ID silently breaks reconciliation with the main CAPI
+  // survey, so we guard against it here.
+  if (id === "") {
+    showMetaStatus("Enter a respondent ID first.", true);
+    return;
   }
-});
-
-// ============================================================
-// 4. SAVE AN ASSESSMENT
-// ============================================================
-saveBtn.addEventListener("click", async () => {
-  // If the user tapped Save while still in the field (never blurred),
-  // compute the elapsed time up to this moment.
-  if (fieldFocusTime !== null && fieldTimeMs === null) {
-    fieldTimeMs = Date.now() - fieldFocusTime;
+  if (id !== idConfirm) {
+    showMetaStatus("The two IDs do not match. Please re-check.", true);
+    return;
   }
 
-  // One assessment = one record object. Every field, entered value, and
-  // captured metric becomes a property here. This shape will grow.
-  const record = {
-    id: Date.now(),                    // unique-enough key (ms timestamp)
-    savedAt: new Date().toISOString(), // human-readable save time
-    patientName: nameInput.value,      // the data the worker entered
-    nameFieldTimeMs: fieldTimeMs,      // the metric we captured
+  // Begin a new session. startedAt marks when the form screen opened.
+  currentSession = {
+    respondentId: id,
+    startedAt: new Date().toISOString(),
+    nameFieldTimeMs: null,
   };
 
-  // Store it. The key is the id as a string; localforage handles the rest.
-  await localforage.setItem(String(record.id), record);
-
-  // Reset the form and the timer for the next assessment.
-  nameInput.value = "";
+  // Reset the telemetry timer for this assessment.
   fieldFocusTime = null;
-  fieldTimeMs = null;
 
-  showStatus("Saved.");
-  updateCount();
+  // Prepare and show the form screen.
+  activeRespondent.textContent = id;
+  nameInput.value = "";
+  showForm();
+  nameInput.focus();
 });
 
 // ============================================================
-// 5. COUNT STORED ASSESSMENTS
+// 6. TELEMETRY — time spent on the name field
 // ============================================================
-// Reads how many records are in local storage and updates the display.
+// Same pattern as before, but the computed value is stored on
+// currentSession rather than a loose variable.
+let fieldFocusTime = null;
+
+nameInput.addEventListener("focus", () => {
+  if (fieldFocusTime === null) fieldFocusTime = Date.now();
+});
+nameInput.addEventListener("blur", () => {
+  if (fieldFocusTime !== null && currentSession) {
+    currentSession.nameFieldTimeMs = Date.now() - fieldFocusTime;
+  }
+});
+
+// ============================================================
+// 7. END ASSESSMENT & SAVE (form -> meta)
+// ============================================================
+endBtn.addEventListener("click", async () => {
+  if (!currentSession) return;
+
+  // If the user never left the field, compute its time now.
+  if (fieldFocusTime !== null && currentSession.nameFieldTimeMs === null) {
+    currentSession.nameFieldTimeMs = Date.now() - fieldFocusTime;
+  }
+
+  // Build the record to store. It carries the respondent ID plus session
+  // timing and the entered data + metrics.
+  const record = {
+    id: Date.now(),                          // unique local key
+    respondentId: currentSession.respondentId,
+    startedAt: currentSession.startedAt,
+    savedAt: new Date().toISOString(),
+    patientName: nameInput.value,
+    nameFieldTimeMs: currentSession.nameFieldTimeMs,
+  };
+
+  await localforage.setItem(String(record.id), record);
+
+  // Clear session and go back to the meta screen, ready for the next one.
+  currentSession = null;
+  fieldFocusTime = null;
+  respondentInput.value = "";
+  respondentConfirm.value = "";
+  showMeta();
+  updateCount();
+  showMetaStatus("Assessment saved.", false);
+});
+
+// ============================================================
+// 8. CANCEL ASSESSMENT (discard, form -> meta)
+// ============================================================
+// For when an assessment is started in error. Discards without saving.
+cancelBtn.addEventListener("click", () => {
+  if (!confirm("Discard this assessment without saving?")) return;
+  currentSession = null;
+  fieldFocusTime = null;
+  showMeta();
+  showMetaStatus("Assessment discarded.", false);
+});
+
+// ============================================================
+// 9. COUNT STORED ASSESSMENTS
+// ============================================================
 async function updateCount() {
   const keys = await localforage.keys();
   countEl.textContent = "Saved assessments on this device: " + keys.length;
 }
 
 // ============================================================
-// 6. EXPORT ALL ASSESSMENTS AS CSV
+// 10. EXPORT ALL ASSESSMENTS AS CSV
 // ============================================================
-// Gathers every stored record, builds a CSV string, and triggers a
-// file download. This is the "manual export" data-collection model:
-// the interviewer exports and sends the file to the research team.
-exportBtn.addEventListener("click", async () => {
-  // Collect every record into an array.
+// Returns the number of records exported (used by the clear flow too).
+// Filename format: competency_YYYY-MM-DD_<n>cases_HHMM.csv
+async function exportCsv() {
   const rows = [];
   await localforage.iterate((value) => { rows.push(value); });
 
-  if (rows.length === 0) {
-    showStatus("Nothing to export yet.");
-    return;
+  if (rows.length === 0) return 0;
+
+  // Flag duplicate respondent IDs so they can be caught in analysis.
+  const idCounts = {};
+  for (const r of rows) {
+    idCounts[r.respondentId] = (idCounts[r.respondentId] || 0) + 1;
   }
 
-  // Define the columns. As records gain fields, add them here so they
-  // appear in the export. (Later we may generate this list automatically.)
-  const headers = ["id", "savedAt", "patientName", "nameFieldTimeMs"];
+  const headers = [
+    "id", "respondentId", "duplicateId",
+    "startedAt", "savedAt", "patientName", "nameFieldTimeMs",
+  ];
   const csvLines = [headers.join(",")];
 
-  // Build one CSV line per record.
   for (const r of rows) {
+    const enriched = {
+      ...r,
+      duplicateId: idCounts[r.respondentId] > 1 ? "YES" : "",
+    };
     const line = headers.map((h) => {
-      const val = (r[h] === undefined || r[h] === null) ? "" : String(r[h]);
-      // Wrap every value in quotes and double any internal quotes, so
-      // commas or quotes inside a value don't break the CSV structure.
+      const val = (enriched[h] === undefined || enriched[h] === null)
+        ? "" : String(enriched[h]);
       return '"' + val.replace(/"/g, '""') + '"';
     });
     csvLines.push(line.join(","));
@@ -134,45 +218,92 @@ exportBtn.addEventListener("click", async () => {
 
   const csv = csvLines.join("\n");
 
-  // Turn the string into a downloadable file and click a hidden link.
+  // Build a descriptive filename: date, case count, and time so repeat
+  // exports on the same day don't overwrite each other.
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);        // YYYY-MM-DD
+  const hhmm = now.toTimeString().slice(0, 5).replace(":", ""); // HHMM
+  const filename = "competency_" + date + "_" + rows.length + "cases_" + hhmm + ".csv";
+
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "assessments-" + new Date().toISOString().slice(0, 10) + ".csv";
+  a.download = filename;
   a.click();
-  URL.revokeObjectURL(url); // free the temporary URL
+  URL.revokeObjectURL(url);
 
-  showStatus("Exported " + rows.length + " assessment(s).");
+  return rows.length;
+}
+
+exportBtn.addEventListener("click", async () => {
+  const n = await exportCsv();
+  if (n === 0) {
+    showMetaStatus("Nothing to export yet.", true);
+  } else {
+    showMetaStatus("Exported " + n + " assessment(s).", false);
+  }
 });
 
 // ============================================================
-// 7. CLEAR ALL ASSESSMENTS (with confirmation)
+// 11. CLEAR ALL — GUARDED (passcode + forced pre-clear export)
 // ============================================================
-// Destructive. Used to reset a device between field sessions AFTER the
-// data has been safely exported. Guarded by a confirm() dialog.
+// Safety sequence:
+//   1. Confirm intent.
+//   2. Require the passcode (blocks accidental / casual wipes).
+//   3. Force a fresh "pre-clear" CSV export BEFORE deleting anything, so
+//      the data is always saved to a file first.
+//   4. Only then wipe local storage.
 clearBtn.addEventListener("click", async () => {
-  if (!confirm("Delete ALL saved assessments on this device?")) return;
+  const keys = await localforage.keys();
+  if (keys.length === 0) {
+    showMetaStatus("No data to clear.", true);
+    return;
+  }
+
+  if (!confirm("Clear ALL saved assessments on this device?")) return;
+
+  const entered = prompt("Enter the clear passcode to continue:");
+  if (entered === null) return;                 // cancelled
+  if (entered !== CLEAR_PASSCODE) {
+    showMetaStatus("Wrong passcode. Data NOT cleared.", true);
+    return;
+  }
+
+  // Force a pre-clear backup export before wiping.
+  const n = await exportCsv();
+  const proceed = confirm(
+    "A pre-clear backup of " + n + " assessment(s) has been downloaded.\n\n" +
+    "Confirm the file downloaded correctly, then press OK to erase the " +
+    "data on this device. Press Cancel to keep the data."
+  );
+  if (!proceed) {
+    showMetaStatus("Clear cancelled. Data kept.", false);
+    return;
+  }
+
   await localforage.clear();
   updateCount();
-  showStatus("All cleared.");
+  showMetaStatus("All data cleared (backup was exported).", false);
 });
 
 // ============================================================
-// 8. STATUS MESSAGE HELPER
+// 12. STATUS MESSAGE HELPERS
 // ============================================================
-// Shows a short message that clears itself after 3 seconds.
-function showStatus(msg) {
-  statusEl.textContent = msg;
-  setTimeout(() => { statusEl.textContent = ""; }, 3000);
+// isError=true tints the message red; otherwise green. Clears after 4s.
+function showMetaStatus(msg, isError) {
+  metaStatus.textContent = msg;
+  metaStatus.style.color = isError ? "#dc2626" : "#059669";
+  setTimeout(() => { metaStatus.textContent = ""; }, 4000);
+}
+function showFormStatus(msg) {
+  formStatus.textContent = msg;
+  setTimeout(() => { formStatus.textContent = ""; }, 4000);
 }
 
 // ============================================================
-// 9. SERVICE WORKER REGISTRATION (offline support)
+// 13. SERVICE WORKER REGISTRATION (offline support)
 // ============================================================
-// The service worker (service-worker.js, at the project root) caches
-// the app's files so it loads with no internet after the first visit.
-// It must live at the root so its "scope" covers the whole app.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("service-worker.js")
@@ -182,7 +313,7 @@ if ("serviceWorker" in navigator) {
 }
 
 // ============================================================
-// 10. INITIALISE
+// 14. INITIALISE
 // ============================================================
-// Show the current saved count as soon as the page loads.
+showMeta();
 updateCount();

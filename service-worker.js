@@ -18,7 +18,7 @@
 */
 
 // Bump this version string whenever any cached file changes.
-const CACHE_NAME = "competency-app-v1";
+const CACHE_NAME = "competency-app-v2";
 
 // Every file the app needs to run offline. Paths are relative to this
 // file (the root). Add new CSS/JS files here as the app grows.
