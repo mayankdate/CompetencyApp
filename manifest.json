@@ -1,7 +1,7 @@
 {
-  "name": "Health Mock Assessment",
-  "short_name": "HealthMock",
-  "description": "Mock health-record app for digital competency assessment of frontline health workers.",
+  "name": "Competency App — Mock Health Record",
+  "short_name": "CompetencyApp",
+  "description": "Mock health-record app for assessing the digital competency of frontline health workers (ASHAs, ANMs) in the Indian public health system.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
