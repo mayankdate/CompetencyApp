@@ -16,6 +16,28 @@
 
 ---
 
+## 2026-08-19 — v0.05: telemetry redesign (response-time model)
+
+**Decision:** Replace focus-duration-as-primary-metric with a response-time
+model. Capture: `totalTimeMs` (whole assessment); per field
+`<field>_responseAtMs` (offset from form-open to FIRST response; blank = NA)
+and `<field>_changedAfter` (changed after first answer? hesitation signal);
+and, **for typed fields only**, `<field>_activeMs` (focus time as a
+typing-effort proxy). All ms measured on a pause-excluding **active-time
+clock**. No keystrokes, no raw event log, no date/time metrics. Adverse
+reaction becomes an explicit **Yes/No radio** so blank = unanswered.
+**Why:** "Focus" is a technical state, not attention — a worker can read/
+think about an unfocused field, and focus time is near-useless for radio/
+select/date. Response-time offsets from a common clock behave uniformly
+across all field types and better proxy engagement/difficulty; differences
+between fields approximate transition time. Excluding paused time keeps
+interruptions out of every measure. The lead audited and approved this model.
+**Rejected:** A full raw timestamped event log (richer but bigger exports and
+more analysis burden than wanted). Keystroke capture (declined — mild
+privacy/volume cost for little needed gain). Keeping focus time for all
+fields (unreliable for non-typed inputs). Raw wall-clock totals including
+pauses (would let interruptions inflate the measures).
+
 ## 2026-08-19 — v0.04: full field set, hamburger menu, version scheme
 
 **Decision:** (a) Expand the form to a UWIN-like immunization record —

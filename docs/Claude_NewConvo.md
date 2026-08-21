@@ -1,4 +1,3 @@
-# AI Working Agreement — Competency App
 This is the CompetencyApp project — a mock health-record PWA for assessing
 digital competency of frontline health workers (ASHAs/ANMs) in India.
 

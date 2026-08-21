@@ -144,17 +144,45 @@ records**, so new fields appear automatically without editing the exporter.
 
 ---
 
-## 4b. How a metric is captured (the pattern)
+## 4b. Telemetry model (v0.05) — how the metrics are defined
 
-Every behavioural metric follows the same idea, shown by the name-field timer:
+All times are in **milliseconds**; no wall-clock date/times are stored as
+metrics. Every ms figure is measured on the **active-time clock**: elapsed
+time since form-open with any **paused** spans (interviewer menu open)
+subtracted. So all offsets are comparable and exclude interruptions.
 
-1. Listen for an event (`focus`) to mark a start time.
-2. Listen for an end event (`blur`, or the Save click) to compute the value.
-3. Store the value as a property on the record when saving.
+**Per assessment:**
+- `totalTimeMs` — active time from Start to save.
 
-Future metrics (edit counts, error flags, field order, total time) are
-variations on this. Keep each metric's capture logic close to the field it
-measures, and document its meaning here when added.
+**Per field:**
+- `<field>_responseAtMs` — active-time offset from form-open to the moment
+  the field **first** received a non-empty response. **Blank = NA** (never
+  answered). This is a cumulative offset-from-start, not a standalone
+  duration: later fields have larger values, and field-to-field *differences*
+  approximate "time to move from one answer to the next".
+- `<field>_changedAfter` — `"YES"` if the value changed at least once after
+  the first response (hesitation/correction signal), else `""`.
+- `<field>_activeMs` — **typed fields only** (name, age, mobile, village):
+  total focused time, a proxy for typing/editing effort. Not captured for
+  radio/select/date fields, where focus time is unreliable.
+
+**The active-time clock** (`app.js` section 4): `startClock()` on Start;
+`pauseClock()`/`resumeClock()` on menu open/close bank paused durations;
+`activeElapsedMs()` returns pause-excluded ms and is the single source every
+timestamp reads from.
+
+**Not captured (by design):** keystrokes, raw event logs, attention/eye
+signals. A browser cannot measure attention; "focus" only means "the active
+input", which is why the model leans on response-time offsets that behave
+uniformly across all field types.
+
+**Adverse reaction** is an explicit **Yes/No radio** (not a checkbox), so a
+blank genuinely means "never answered", consistent with all other fields.
+
+**Known interpretation caveats:** `_activeMs` is only meaningful for typed
+fields. `responseAtMs` for `input`-driven text fields is set on first
+character, whereas for select/date it is set on the commit/change event —
+a small definitional difference to keep in mind during analysis.
 
 ---
 

@@ -24,7 +24,7 @@
 */
 
 // Keep this identical to APP_VERSION in js/app.js.
-const APP_VERSION_TAG = "v0.04";
+const APP_VERSION_TAG = "v0.05";
 
 // The cache name is derived from the version tag, so bumping the version
 // automatically gives a fresh cache and evicts the old one on activate.

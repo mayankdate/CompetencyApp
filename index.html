@@ -107,9 +107,11 @@
         <option value="Booster">Booster</option>
       </select>
 
-      <label class="checkbox-row">
-        <input type="checkbox" id="adverse" /> Any adverse reaction reported?
-      </label>
+      <label>Any adverse reaction reported?</label>
+      <div class="radio-row">
+        <label class="radio"><input type="radio" name="adverse" value="Yes" /> Yes</label>
+        <label class="radio"><input type="radio" name="adverse" value="No" /> No</label>
+      </div>
 
       <button id="submitBtn" class="submit">Submit record</button>
     </div>
