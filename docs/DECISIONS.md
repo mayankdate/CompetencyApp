@@ -16,6 +16,31 @@
 
 ---
 
+## 2026-08-21 — Central database: Supabase (Mumbai), plain columns, dashboard SQL
+
+**Decision:** Add a central database using **Supabase** (managed Postgres),
+in the **Mumbai (ap-south-1)** region for India data-residency. Keep the
+local-first design: app still saves to IndexedDB and syncs to the DB when
+online; CSV export stays as fallback. Table uses **plain columns, not JSON**.
+Schema changes are done **by hand in the Supabase SQL Editor**, not via the
+CLI/GitHub migrations, and every statement is logged in `docs/DATABASE.md`.
+Security = **insert-only Row Level Security + a passphrase** given at training
+(never in the app source), enforced on the DB side.
+**Why:** A central store answers the "too many CSVs" problem (boss request)
+while local-first keeps offline robustness. Mumbai meets the compliance line
+(data physically in India, under our control). Plain columns are easier to
+read, pull into R, and audit — worth the cost of a manual `ALTER TABLE` per
+new field. Dashboard SQL avoids build tooling a beginner doesn't need;
+logging every statement preserves history without the CLI. Insert-only means
+a public app can safely write without exposing or risking existing data.
+**Rejected:** KoboToolbox (can't capture the custom per-field telemetry that
+is the point of the study). Firebase (NoSQL, less natural for R; usage
+billing). JSON-hybrid schema (more flexible but less auditable — lead chose
+plain columns). GitHub↔Supabase migrations now (CLI/tooling complexity
+premature while prototyping; revisit at production). Per-interviewer logins
+(impossible to keep secret in a public app; identity captured as data
+instead). Data stored outside India (compliance).
+
 ## 2026-08-19 — v0.05: telemetry redesign (response-time model)
 
 **Decision:** Replace focus-duration-as-primary-metric with a response-time
