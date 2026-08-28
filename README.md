@@ -24,6 +24,7 @@ in [`docs/`](docs/). Read these in order if you are new (human or AI):
 |------|---------|
 | [`docs/PROJECT_BRIEF.md`](docs/PROJECT_BRIEF.md) | **The why.** Research goal, users, constraints, settled decisions. The stable context. Read this first. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **The how.** Every file explained, data flow, how metrics are captured. The handover document. |
+| [`docs/DATABASE.md`](docs/DATABASE.md) | **The database.** Supabase schema, every SQL statement run, the security model, and how to add fields. |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | **The choices.** Running, append-only log of decisions and what was rejected, so settled questions stay settled. |
 | [`docs/AI_WORKING_AGREEMENT.md`](docs/AI_WORKING_AGREEMENT.md) | **The process.** Rules for how AI assistants (and humans) contribute, including the doc-update discipline. Paste at the start of AI sessions. |
 
@@ -31,11 +32,14 @@ in [`docs/`](docs/). Read these in order if you are new (human or AI):
 
 ## Status
 
-**Skeleton build.** Proves the end-to-end plumbing: a form field, one
-captured metric, local storage that survives offline, PWA install, and
-CSV export. Confirmed working offline on a real Android device.
+**Skeleton + telemetry proven; central database built and secured
+(pre-connection).** The app (v0.05) runs offline, captures the response-time
+telemetry model, stores assessments locally, and exports CSV. A Supabase
+(Mumbai) database now exists with an insert-only + passphrase security model,
+verified by test. **The app is not yet connected to the database** — the sync
+module is the next build step. See [`docs/DATABASE.md`](docs/DATABASE.md).
 
-Real UWIN-like fields, the mock patient case, and full telemetry come next.
+Real UWIN-like field expansion and the sync module come next.
 
 ---
 

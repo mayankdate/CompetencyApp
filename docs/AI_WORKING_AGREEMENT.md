@@ -69,6 +69,8 @@ documentation updates, in the same change:
   assume the reader is a capable beginner).
 - **`ARCHITECTURE.md`** — update the affected section (file description, data
   model, metric definition, lifecycle, etc.).
+- **`DATABASE.md`** — if any SQL was run against the database (new table,
+  `ALTER TABLE`, policy change), record the exact statement there, dated.
 - **`DECISIONS.md`** — add a dated entry **if a real design choice was made**
   (something with alternatives that were weighed).
 - **`README.md`** — touch only if how to run/deploy/structure changed.

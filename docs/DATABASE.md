@@ -110,9 +110,66 @@ create table assessments (
 );
 ```
 
-### Security (Row Level Security policies)
+### 2026-08-21 — Security: enable RLS + insert-only + passphrase
 
-> *To be added in Stage 2 — insert-only + passphrase enforcement.*
+Run in order. Concept: enabling RLS locks the table completely (deny all);
+each policy then opens exactly one narrow door. We open only INSERT, and
+only when the correct passphrase is present.
+
+```sql
+-- 1. Turn on Row Level Security. After this, ALL access is denied until a
+--    policy allows it — the table goes from "wide open" to "locked".
+alter table assessments enable row level security;
+```
+
+```sql
+-- 2. (Interim) allow anonymous inserts. Replaced immediately by step 3.
+--    Kept here for history; do not re-run.
+create policy "anon can insert assessments"
+  on assessments
+  for insert
+  to anon
+  with check (true);
+```
+
+```sql
+-- 3. Replace the loose policy with one that REQUIRES the passphrase.
+--    The check runs inside the database, so it holds even if someone
+--    bypasses the app and hits the API directly. Only INSERT is granted;
+--    there is deliberately NO select/update/delete policy, so outsiders
+--    can never read, alter, or wipe collected data.
+drop policy "anon can insert assessments" on assessments;
+
+create policy "anon can insert with passphrase"
+  on assessments
+  for insert
+  to anon
+  with check ( passphrase = 'meghalaya2026' );
+```
+
+**Passphrase:** currently `meghalaya2026` (placeholder). Given to the field
+team at training; never stored in the app source. Rotatable: to change it,
+re-run step 3's `create policy` with a new value (after dropping the old
+policy), then re-train the team. A wrong/missing passphrase is rejected with
+Postgres error `42501` (permission denied) — useful to recognise in sync logs.
+
+**Final policy state:** exactly one policy on `assessments` —
+`"anon can insert with passphrase"`, command INSERT, role anon.
+
+### 2026-08-21 — Security test (verified working)
+
+Ran from the SQL Editor as the `anon` role (`set local role anon;`) to
+simulate the app's public key. Result confirmed the lock holds:
+
+| Test | Passphrase sent | Result |
+|------|-----------------|--------|
+| 1 | none | **Rejected** (`42501` RLS violation) ✓ |
+| 2 | wrong value | **Rejected** (`42501` RLS violation) ✓ |
+| 3 | correct (`meghalaya2026`) | **Accepted** — one row inserted ✓ |
+
+Table showed exactly the one valid row (`TEST-003`); rejected attempts never
+landed. Test row subsequently deleted (as admin, via Table Editor — anon
+cannot delete by design). Table is clean and ready for app connection.
 
 ---
 
