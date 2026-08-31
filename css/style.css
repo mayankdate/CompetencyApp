@@ -163,3 +163,21 @@ button.submit { margin-top: 28px; background: #059669; }
 .menu-pane h2 { font-size: 1.1rem; margin: 0 0 8px; }
 .menu-note { font-size: 0.9rem; color: #667085; margin: 4px 0; }
 .menu-pane button { margin-top: 14px; }
+
+/* ============ SYNC STATE TEXT ============ */
+/* Small status lines under the passphrase and sync controls. */
+.sync-state {
+  font-size: 0.85rem;
+  margin: 6px 0 0;
+  color: #667085;
+}
+
+/* Password input matches other inputs. */
+input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  border: 1px solid #cdd5df;
+  border-radius: 8px;
+  background: white;
+}

@@ -47,7 +47,6 @@ render well on low-end Android. Add a commented section per new component.
 
 ### `js/app.js`
 All application logic. Currently one file, organised into numbered sections:
-
 1. **Storage setup** — configures `localforage` (our IndexedDB wrapper).
 2. **Element references** — grabs page elements once for reuse.
 3. **Telemetry** — the name-field timer; the template for all future metrics.
@@ -61,6 +60,20 @@ All application logic. Currently one file, organised into numbered sections:
 
 Will be split into modules (e.g. `storage.js`, `telemetry.js`) once it grows
 large enough that splitting clearly helps. Not yet.
+
+### `js/sync.js`
+Pushes locally-stored assessments to the Supabase database (local-first with
+background sync). Holds the **public** Supabase URL + anon key (safe to ship;
+security is in the DB policies), the per-device **passphrase** storage, an
+explicit **column mapping** (app camelCase → DB snake_case), and the
+`syncNow()` routine: find `synced:false` records, insert each (carrying the
+passphrase), flip to `synced:true` on success, leave failures for retry.
+Never throws; failures are counted, never lost. `countUnsynced()` powers the
+meta-screen display. Loaded before `app.js`, which calls into it.
+
+**Fill-in required:** `SUPABASE_URL` and `SUPABASE_ANON_KEY` at the top of the
+file (from Supabase → Project Settings → API). Never put the secret/
+service_role key here.
 
 ### `service-worker.js` (root)
 Makes the app work offline. Caches all listed files on install, serves them

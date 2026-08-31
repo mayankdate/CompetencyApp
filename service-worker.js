@@ -24,7 +24,7 @@
 */
 
 // Keep this identical to APP_VERSION in js/app.js.
-const APP_VERSION_TAG = "v0.05";
+const APP_VERSION_TAG = "v0.06";
 
 // The cache name is derived from the version tag, so bumping the version
 // automatically gives a fresh cache and evicts the old one on activate.
@@ -38,7 +38,9 @@ const FILES_TO_CACHE = [
   "./manifest.json",
   "./css/style.css",
   "./js/app.js",
+  "./js/sync.js",
   "https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js",
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
 ];
 
 // INSTALL: open the cache and store all the app's files.

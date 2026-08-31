@@ -16,6 +16,28 @@
 
 ---
 
+## 2026-08-21 — v0.06: sync module (app connected to Supabase)
+
+**Decision:** Connect the app to the Supabase database via a new `js/sync.js`,
+using local-first-with-background-sync. Each saved record gets `synced:false`;
+`syncNow()` pushes unsynced records (carrying the device passphrase) and marks
+them `synced:true` on success, leaving failures to retry. The interviewer
+enters the passphrase once on the meta screen (cached per device, password
+input); the meta screen shows passphrase state, an unsynced count, and a
+"Sync now" button. Sync triggers: on save (if online), on network return
+(`online` event), on app open, and manual. Column mapping (app camelCase → DB
+snake_case) is explicit in `sync.js`. CSV export unchanged as fallback.
+Supabase URL + anon key are public (security is in DB policies); the secret
+key is never in the app.
+**Why:** Delivers the central database the boss wanted without losing offline
+robustness — the local copy stays the source of truth and nothing depends on
+the network at save time. Visible sync state builds field trust.
+**Rejected:** Blocking save on a successful sync (would fail offline — the
+whole point is not to). Auto-syncing without a manual button (interviewers
+want to see it work). Implicit/automatic column mapping (less auditable than
+an explicit map). Storing the passphrase in the app source (defeats the
+security model — it's entered at training and cached per device).
+
 ## 2026-08-21 — Central database: Supabase (Mumbai), plain columns, dashboard SQL
 
 **Decision:** Add a central database using **Supabase** (managed Postgres),

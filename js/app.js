@@ -51,7 +51,7 @@
 // (mirrored in service-worker.js as APP_VERSION_TAG) used to name the
 // offline cache. Keep the two identical. Bump on every deploy of a cached
 // file. Scheme: v0.NN for proof-of-concept builds.
-const APP_VERSION = "v0.05";
+const APP_VERSION = "v0.06";
 
 // Speed bump guarding "Clear all data". NOT real security.
 const CLEAR_PASSCODE = "wipe1234";
@@ -324,6 +324,7 @@ endBtn.addEventListener("click", async () => {
     id: Date.now(),
     respondentId: currentSession.respondentId,
     totalTimeMs: totalTimeMs,
+    synced: false,   // not yet pushed to the database (sync.js handles this)
   };
 
   // Field values.
@@ -348,6 +349,9 @@ endBtn.addEventListener("click", async () => {
   showMeta();
   updateCount();
   showMetaStatus("Assessment saved.", false);
+
+  // Try to sync in the background if online (never blocks saving).
+  tryBackgroundSync();
 });
 
 // ============================================================
@@ -476,9 +480,89 @@ if ("serviceWorker" in navigator) {
 }
 
 // ============================================================
+// 17b. SYNC WIRING (uses sync.js)
+// ============================================================
+const passphraseInput = document.getElementById("passphraseInput");
+const savePassphraseBtn = document.getElementById("savePassphraseBtn");
+const passphraseState = document.getElementById("passphraseState");
+const syncNowBtn = document.getElementById("syncNowBtn");
+const syncState = document.getElementById("syncState");
+
+// Show whether a passphrase is set (masked) and the unsynced count.
+async function refreshSyncUi() {
+  const pass = await getPassphrase();
+  if (passphraseState) {
+    passphraseState.textContent = pass
+      ? "Passphrase is set on this device ✓"
+      : "No passphrase set — sync is disabled until you set it.";
+    passphraseState.style.color = pass ? "#059669" : "#dc2626";
+  }
+  const n = await countUnsynced();
+  if (syncState) {
+    syncState.textContent = n === 0
+      ? "All assessments synced."
+      : (n + " assessment(s) not yet synced.");
+    syncState.style.color = n === 0 ? "#667085" : "#b54708";
+  }
+}
+
+// Save the passphrase the interviewer typed.
+if (savePassphraseBtn) {
+  savePassphraseBtn.addEventListener("click", async () => {
+    const v = passphraseInput.value.trim();
+    if (v === "") { showMetaStatus("Enter a passphrase first.", true); return; }
+    await setPassphrase(v);
+    passphraseInput.value = "";
+    await refreshSyncUi();
+    showMetaStatus("Passphrase saved on this device.", false);
+    tryBackgroundSync();
+  });
+}
+
+// Manual "Sync now" button.
+if (syncNowBtn) {
+  syncNowBtn.addEventListener("click", async () => {
+    showMetaStatus("Syncing…", false);
+    const r = await syncNow();
+    reportSync(r);
+    await refreshSyncUi();
+    updateCount();
+  });
+}
+
+// Background sync that never interrupts the user.
+async function tryBackgroundSync() {
+  if (!navigator.onLine) { await refreshSyncUi(); return; }
+  const pass = await getPassphrase();
+  if (!pass) { await refreshSyncUi(); return; }
+  const r = await syncNow();
+  reportSync(r);
+  await refreshSyncUi();
+}
+
+// Turn a sync result into a status message.
+function reportSync(r) {
+  if (!r || r.skipped) return;
+  if (r.offline) { showMetaStatus("Offline — will sync when connected.", true); return; }
+  if (r.noPassphrase) { showMetaStatus("Set the passphrase to enable sync.", true); return; }
+  if (r.failed > 0) {
+    showMetaStatus("Synced " + r.pushed + ", failed " + r.failed + " (will retry).", true);
+  } else if (r.pushed > 0) {
+    showMetaStatus("Synced " + r.pushed + " assessment(s).", false);
+  } else {
+    showMetaStatus("Nothing new to sync.", false);
+  }
+}
+
+// Auto-sync when the network comes back.
+window.addEventListener("online", () => { tryBackgroundSync(); });
+
+// ============================================================
 // 18. INIT
 // ============================================================
 attachAllListeners();
 showMeta();
 updateCount();
 showVersion();
+refreshSyncUi();
+tryBackgroundSync();   // attempt a sync on app open (if online + passphrase set)
